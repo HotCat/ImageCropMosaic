@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+*.spec.bak
+
+# PyInstaller
+*.manifest
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# PySide6
+*.ui.py
+
+# Generated output
+saved/
+
+# SAM2 repository (cloned separately)
+sam2/
+
+# PyInstaller output
+dist/
+build/
+
+# Temp files
+myplans.txt~

@@ -1,0 +1,34 @@
+gh auth login
+
+my new origin is https://github.com/HotCat/ImageCropMosaic.git, please create my own local git repository, commit and push it to remote, thorough comment
+
+let's start a new pyside6 QT application in macos Sequoia 15.6 on macbook m4, this application use sam2 to select object in the current image using different prompt combinations, like positive points, negative points, positive bounding box, after selection is done, I could apply different image processing algorithms on that selected area, like apply mosaic. also support bounding box cropping tool to save the selected box area to files
+
+1. prepare PyTorch (Metal / MPS backend) environment, I have put you in a dedicated python 11 conda environment, please help yourself installing any necessary dependence. I have already clone sam2 repository at ./sam2 directory
+
+2. please consult sam2_prompt_explorer.py to figure out the logic on how to perform the sam2 prompt selection, but implement it in pyside6
+
+3. when the the sam2 mask was selected, you add a button on main window toolbar to apply mosaic. please design this application data path in such a way, that latter on it could allow other image operation to apply on this sam2 mask area
+
+4. add a button on main window toolbar to activate a bounding box selection, after selection is done, I could click 'mosaic' button on toolbar to apply mosaic on selected area. please follow the same data path design as sam2, it could allow potential image operation to apply on selected bounding box area
+
+5. add a 'save' button on main window toolbar, when click, it save the selected bounding box area image to a dedicated directory
+
+6. the application support commandline argument to specific the image path. or there's an 'open' button on main window toolbar to select the image file
+
+7. please write pyinstall .spec and pack the application in a executable file
+
+
+I found that 'Open' button never works, it simply does not respond. only command line file loading works. also the point selection logic has a serious problem. so I describe the sam2 prompts operating logic: the requirement is to let me explore the sam2's prompts manually. to make this destination reachable: I want your python UI provide a basic widgets of radio check button control, that let me select wether to use positive bounding box, positive points, negative points. also a confirm button to finish selecting all the prompts. for example, I first choose to select positive points, I click left mouse button to insert an positive point on image, then I click mouse again to insert another positive point on image. then I click radio check button to select bounding box, I drag and drop the mouse to select the bounding box. then I click radio check button to select negative points, click mouse to insert one negative points, then another. I can use radio check button again to select positive points again, then click mouse to append positive points. until I click the confirm button to frozen all the prompts. please refer sam2_prompt_explorer.py again to align this logic
+
+
+fix the following issues
+1. when sam2 finish executing and show the contour, the 'clear' button does not clean the detected contour, it only clean the positive, negative, bounding box prompt
+2. which sam2 model did you use? I expect large model. I found sam2_prompt_explorer.py sam2 output tight contour line around the colored sam2 mask, while current program output a bounding box wrap around the colored sam2 mask, does this related to model use?
+3. I have no idea what's 'view' button doing
+4. how does 'Block' parameter affect the quality of mosaic?
+5. the 'crop' button does not have a deactive state
+
+fix the following issues:
+1.when I select +Point, select one or two points -> Confirm -> Clear, the mask does not go away. but I suddenly switch to other app, and switch back, sam2 mask cleared
+2.the 'Crop' button seems collision with SAM2 points, bounding box selection function, figure out how to solve it
