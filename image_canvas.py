@@ -152,7 +152,7 @@ class ImageCanvas(QGraphicsView):
 
         self._is_dragging = False
         self._is_panning = False
-        self._pan_last = None
+        self._saved_drag_mode = QGraphicsView.NoDrag
         self._drag_start: Optional[Tuple[int, int]] = None
         self._current_mode = self.MODE_VIEW
         self._image_size: Optional[Tuple[int, int]] = None
@@ -169,8 +169,10 @@ class ImageCanvas(QGraphicsView):
             self._image_item.setPixmap(pixmap)
 
         self._image_item.setZValue(0)
-        self.setSceneRect(0, 0, w, h)
-        self.fitInView(self._image_item, Qt.KeepAspectRatio)
+        # Use a large scene rect so scroll bars always have range for free panning
+        margin = max(w, h) * 4
+        self.setSceneRect(-margin, -margin, w + 2 * margin, h + 2 * margin)
+        self.fitInView(QRectF(0, 0, w, h), Qt.KeepAspectRatio)
 
     def set_mode(self, mode: int):
         self._current_mode = mode
@@ -266,19 +268,18 @@ class ImageCanvas(QGraphicsView):
         return x, y
 
     def mousePressEvent(self, event):
-        # Pan: right-click drag, or Cmd+left-click drag, or Ctrl+left-click drag
-        # Note: on macOS, Ctrl+click generates RightButton (system right-click)
+        # Pan: Alt+drag (Option on Mac), Cmd+drag, or right-click drag
         is_pan = (
             event.button() == Qt.RightButton or
             (event.button() == Qt.LeftButton and
-             event.modifiers() & (Qt.ControlModifier | Qt.MetaModifier))
+             event.modifiers() & (Qt.AltModifier | Qt.ControlModifier | Qt.MetaModifier))
         )
         if is_pan:
             self._is_panning = True
-            self._pan_last = event.pos()
-            self.setCursor(Qt.ClosedHandCursor)
-            self.grabMouse()  # Capture all mouse events during pan
-            event.accept()
+            self._saved_drag_mode = self.dragMode()
+            self.setDragMode(QGraphicsView.ScrollHandDrag)
+            # Let Qt handle the rest natively
+            super().mousePressEvent(event)
             return
 
         if event.button() != Qt.LeftButton:
@@ -300,14 +301,8 @@ class ImageCanvas(QGraphicsView):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        if self._is_panning and self._pan_last is not None:
-            current = event.pos()
-            dx = current.x() - self._pan_last.x()
-            dy = current.y() - self._pan_last.y()
-            self._pan_last = current
-            # Natural pan: content moves with mouse direction
-            t = self.transform()
-            self.translate(-dx / t.m11(), -dy / t.m22())
+        if self._is_panning:
+            super().mouseMoveEvent(event)
             return
 
         if self._is_dragging and self._drag_start is not None:
@@ -323,14 +318,14 @@ class ImageCanvas(QGraphicsView):
     def mouseReleaseEvent(self, event):
         if self._is_panning:
             self._is_panning = False
-            self._pan_last = None
-            self.releaseMouse()
+            self.setDragMode(self._saved_drag_mode)
+            # Restore cursor for current mode
             if self._current_mode in (self.MODE_SAM2_POS, self.MODE_SAM2_NEG,
                                        self.MODE_SAM2_BBOX, self.MODE_CROP_BBOX):
                 self.setCursor(Qt.CrossCursor)
             else:
                 self.setCursor(Qt.ArrowCursor)
-            event.accept()
+            super().mouseReleaseEvent(event)
             return
 
         if event.button() != Qt.LeftButton:
@@ -357,10 +352,12 @@ class ImageCanvas(QGraphicsView):
         self.scale(factor, factor)
 
     def fit_to_view(self):
-        if self._image_item:
-            self.fitInView(self._image_item, Qt.KeepAspectRatio)
+        if self._image_size:
+            w, h = self._image_size
+            self.fitInView(QRectF(0, 0, w, h), Qt.KeepAspectRatio)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        if self._image_item:
-            self.fitInView(self._image_item, Qt.KeepAspectRatio)
+        if self._image_size:
+            w, h = self._image_size
+            self.fitInView(QRectF(0, 0, w, h), Qt.KeepAspectRatio)
