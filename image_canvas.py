@@ -277,6 +277,7 @@ class ImageCanvas(QGraphicsView):
             self._is_panning = True
             self._pan_last = event.pos()
             self.setCursor(Qt.ClosedHandCursor)
+            self.grabMouse()  # Capture all mouse events during pan
             event.accept()
             return
 
@@ -304,9 +305,9 @@ class ImageCanvas(QGraphicsView):
             dx = current.x() - self._pan_last.x()
             dy = current.y() - self._pan_last.y()
             self._pan_last = current
-            # Account for zoom: translate in scene coordinates
+            # Natural pan: content moves with mouse direction
             t = self.transform()
-            self.translate(dx / t.m11(), dy / t.m22())
+            self.translate(-dx / t.m11(), -dy / t.m22())
             return
 
         if self._is_dragging and self._drag_start is not None:
@@ -323,6 +324,7 @@ class ImageCanvas(QGraphicsView):
         if self._is_panning:
             self._is_panning = False
             self._pan_last = None
+            self.releaseMouse()
             if self._current_mode in (self.MODE_SAM2_POS, self.MODE_SAM2_NEG,
                                        self.MODE_SAM2_BBOX, self.MODE_CROP_BBOX):
                 self.setCursor(Qt.CrossCursor)
