@@ -152,7 +152,6 @@ class ImageCanvas(QGraphicsView):
 
         self._is_dragging = False
         self._is_panning = False
-        self._pan_start: Optional[Tuple[int, int]] = None
         self._drag_start: Optional[Tuple[int, int]] = None
         self._current_mode = self.MODE_VIEW
         self._image_size: Optional[Tuple[int, int]] = None
@@ -273,8 +272,8 @@ class ImageCanvas(QGraphicsView):
         # Ctrl/Cmd+LeftClick = pan view
         if event.modifiers() & (Qt.ControlModifier | Qt.MetaModifier):
             self._is_panning = True
-            self._pan_start = (event.pos().x(), event.pos().y())
-            self.setCursor(Qt.ClosedHandCursor)
+            self.setDragMode(QGraphicsView.ScrollHandDrag)
+            # Let Qt handle the drag natively
             super().mousePressEvent(event)
             return
 
@@ -293,12 +292,8 @@ class ImageCanvas(QGraphicsView):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        if self._is_panning and self._pan_start is not None:
-            dx = event.pos().x() - self._pan_start[0]
-            dy = event.pos().y() - self._pan_start[1]
-            self._pan_start = (event.pos().x(), event.pos().y())
-            self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - dx)
-            self.verticalScrollBar().setValue(self.verticalScrollBar().value() - dy)
+        if self._is_panning:
+            super().mouseMoveEvent(event)
             return
 
         if self._is_dragging and self._drag_start is not None:
@@ -318,7 +313,7 @@ class ImageCanvas(QGraphicsView):
 
         if self._is_panning:
             self._is_panning = False
-            self._pan_start = None
+            self.setDragMode(QGraphicsView.NoDrag)
             # Restore cursor for current mode
             if self._current_mode in (self.MODE_SAM2_POS, self.MODE_SAM2_NEG,
                                        self.MODE_SAM2_BBOX, self.MODE_CROP_BBOX):
