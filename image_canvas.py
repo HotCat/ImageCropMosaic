@@ -152,6 +152,7 @@ class ImageCanvas(QGraphicsView):
 
         self._is_dragging = False
         self._is_panning = False
+        self._pan_start: Optional[QPointF] = None
         self._drag_start: Optional[Tuple[int, int]] = None
         self._current_mode = self.MODE_VIEW
         self._image_size: Optional[Tuple[int, int]] = None
@@ -269,12 +270,11 @@ class ImageCanvas(QGraphicsView):
             super().mousePressEvent(event)
             return
 
-        # Ctrl/Cmd+LeftClick = pan view
+        # Ctrl/Cmd+LeftClick = pan view (works even when image fits viewport)
         if event.modifiers() & (Qt.ControlModifier | Qt.MetaModifier):
             self._is_panning = True
-            self.setDragMode(QGraphicsView.ScrollHandDrag)
-            # Let Qt handle the drag natively
-            super().mousePressEvent(event)
+            self._pan_start = self.mapToScene(event.pos())
+            self.setCursor(Qt.ClosedHandCursor)
             return
 
         scene_pos = self.mapToScene(event.pos())
@@ -292,8 +292,11 @@ class ImageCanvas(QGraphicsView):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        if self._is_panning:
-            super().mouseMoveEvent(event)
+        if self._is_panning and self._pan_start is not None:
+            current = self.mapToScene(event.pos())
+            dx = current.x() - self._pan_start.x()
+            dy = current.y() - self._pan_start.y()
+            self.translate(dx, dy)
             return
 
         if self._is_dragging and self._drag_start is not None:
@@ -313,14 +316,13 @@ class ImageCanvas(QGraphicsView):
 
         if self._is_panning:
             self._is_panning = False
-            self.setDragMode(QGraphicsView.NoDrag)
+            self._pan_start = None
             # Restore cursor for current mode
             if self._current_mode in (self.MODE_SAM2_POS, self.MODE_SAM2_NEG,
                                        self.MODE_SAM2_BBOX, self.MODE_CROP_BBOX):
                 self.setCursor(Qt.CrossCursor)
             else:
                 self.setCursor(Qt.ArrowCursor)
-            super().mouseReleaseEvent(event)
             return
 
         if self._is_dragging and self._drag_start is not None:
