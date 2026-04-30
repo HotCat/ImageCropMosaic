@@ -23,16 +23,8 @@ MIN_BBOX_SIZE = 5
 DEFAULT_MOSAIC_BLOCK_SIZE = 10
 SAVE_DIR = Path(__file__).parent / "saved"
 
-# Super Resolution (ControlNet Tile SR + SDXL)
-SR_CONTROLNET_MODEL = "brad-twinkl/controlnet-union-sdxl-1.0-promax"
-SR_SDXL_MODEL = "SG161222/RealVisXL_V5.0"
-SR_VAE_MODEL = "madebyollin/sdxl-vae-fp16-fix"
-
-SR_RESOLUTION_CHOICES = [1024, 2048, 4096, 8192]
-SR_DEFAULT_RESOLUTION = 4096
-SR_DEFAULT_STRENGTH = 0.65
-SR_DEFAULT_GUIDANCE_SCALE = 4.0
-SR_DEFAULT_NUM_STEPS = 35
-SR_DEFAULT_MAX_TILE_SIZE = 1024
-SR_DEFAULT_PROMPT = "high-quality, noise-free edges, high quality, 4k, hd, 8k"
-SR_DEFAULT_NEGATIVE_PROMPT = "blurry, pixelated, noisy, low resolution, artifacts, poor details"
+# Super Resolution (Real-ESRGAN - lightweight CNN upscaler)
+SR_MODEL_DIR = Path(__file__).parent / "sr_models"
+SR_DEFAULT_SCALE = 4
+SR_SCALE_CHOICES = [2, 4]
+SR_DEFAULT_TILE_SIZE = 512

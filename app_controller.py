@@ -125,7 +125,7 @@ class AppController(QObject):
         self.status_message.emit("SAM2 model ready")
 
     def load_sr_model(self):
-        self._sr_service.load_model()
+        self._sr_service.load_model(scale=4)
 
     def _on_sr_loaded(self):
         self.sr_loaded.emit()

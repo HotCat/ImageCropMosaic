@@ -4,7 +4,7 @@ from typing import Optional
 from PySide6.QtWidgets import (
     QMainWindow, QToolBar, QStatusBar, QFileDialog,
     QMessageBox, QWidget, QVBoxLayout, QLabel, QSpinBox,
-    QComboBox, QDoubleSpinBox
+    QComboBox
 )
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QAction, QActionGroup, QKeySequence
@@ -14,9 +14,7 @@ from app_controller import AppController, AppMode
 from selection_model import SelectionType
 from config import (
     SAM2_CONFIG, CHECKPOINT_PATH, SAVE_DIR,
-    SR_RESOLUTION_CHOICES, SR_DEFAULT_RESOLUTION,
-    SR_DEFAULT_STRENGTH, SR_DEFAULT_GUIDANCE_SCALE,
-    SR_DEFAULT_NUM_STEPS, SR_DEFAULT_PROMPT, SR_DEFAULT_NEGATIVE_PROMPT,
+    SR_SCALE_CHOICES, SR_DEFAULT_SCALE,
 )
 
 
@@ -141,38 +139,17 @@ class MainWindow(QMainWindow):
         # -- Super Resolution --
         self._sr_action = QAction("SR", self)
         self._sr_action.setShortcut("S")
-        self._sr_action.setToolTip("Run Super Resolution on current image (S)")
+        self._sr_action.setToolTip("Run Super Resolution (Real-ESRGAN upscaling)")
         toolbar.addAction(self._sr_action)
 
-        toolbar.addWidget(QLabel(" Res:"))
-        self._sr_resolution_combo = QComboBox()
-        for r in SR_RESOLUTION_CHOICES:
-            self._sr_resolution_combo.addItem(f"{r}", r)
-        default_idx = SR_RESOLUTION_CHOICES.index(SR_DEFAULT_RESOLUTION)
-        self._sr_resolution_combo.setCurrentIndex(default_idx)
-        self._sr_resolution_combo.setToolTip("Target resolution (longest side)")
-        toolbar.addWidget(self._sr_resolution_combo)
-
-        toolbar.addWidget(QLabel(" Str:"))
-        self._sr_strength_spin = QDoubleSpinBox()
-        self._sr_strength_spin.setRange(0.1, 1.0)
-        self._sr_strength_spin.setSingleStep(0.05)
-        self._sr_strength_spin.setValue(SR_DEFAULT_STRENGTH)
-        self._sr_strength_spin.setDecimals(2)
-        self._sr_strength_spin.setToolTip(
-            "Denoising strength\n"
-            "0.3-0.5: subtle enhancement\n"
-            "0.5-0.7: stronger detail\n"
-            ">0.7: may hallucinate"
-        )
-        toolbar.addWidget(self._sr_strength_spin)
-
-        toolbar.addWidget(QLabel(" Steps:"))
-        self._sr_steps_spin = QSpinBox()
-        self._sr_steps_spin.setRange(10, 75)
-        self._sr_steps_spin.setValue(SR_DEFAULT_NUM_STEPS)
-        self._sr_steps_spin.setToolTip("Inference steps (more = better but slower)")
-        toolbar.addWidget(self._sr_steps_spin)
+        toolbar.addWidget(QLabel(" Scale:"))
+        self._sr_scale_combo = QComboBox()
+        for s in SR_SCALE_CHOICES:
+            self._sr_scale_combo.addItem(f"{s}x", s)
+        default_idx = SR_SCALE_CHOICES.index(SR_DEFAULT_SCALE)
+        self._sr_scale_combo.setCurrentIndex(default_idx)
+        self._sr_scale_combo.setToolTip("Upscaling factor (2x = faster, 4x = more detail)")
+        toolbar.addWidget(self._sr_scale_combo)
 
         toolbar.addSeparator()
 
@@ -256,13 +233,8 @@ class MainWindow(QMainWindow):
             return
 
         params = {
-            "resolution": self._sr_resolution_combo.currentData(),
-            "strength": self._sr_strength_spin.value(),
-            "guidance_scale": SR_DEFAULT_GUIDANCE_SCALE,
-            "num_inference_steps": self._sr_steps_spin.value(),
-            "max_tile_size": 1024,
-            "prompt": SR_DEFAULT_PROMPT,
-            "negative_prompt": SR_DEFAULT_NEGATIVE_PROMPT,
+            "scale": self._sr_scale_combo.currentData(),
+            "tile_size": 512,
         }
         self._controller.apply_super_resolution(params)
 
