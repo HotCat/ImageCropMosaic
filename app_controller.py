@@ -8,6 +8,7 @@ from PySide6.QtCore import QObject, Signal, Slot
 from image_model import ImageModel
 from selection_model import SelectionModel, SelectionType
 from sam2_service import SAM2Service
+from sr_service import SRService
 from image_operations import OperationRegistry
 
 
@@ -28,6 +29,9 @@ class AppController(QObject):
     sam2_loading = Signal(str)
     sam2_loaded = Signal()
     sam2_error = Signal(str)
+    sr_loading = Signal(str)
+    sr_loaded = Signal()
+    sr_error = Signal(str)
     status_message = Signal(str)
 
     def __init__(self, parent=None):
@@ -35,14 +39,25 @@ class AppController(QObject):
         self._image_model = ImageModel()
         self._selection_model = SelectionModel()
         self._sam2_service = SAM2Service()
+        self._sr_service = SRService()
         self._current_mode = AppMode.SAM2_POSITIVE
         self._multimask = True
 
+        # SAM2 wiring
         self._sam2_service.load_progress.connect(self.sam2_loading)
         self._sam2_service.model_loaded.connect(self._on_sam2_loaded)
         self._sam2_service.model_load_failed.connect(self.sam2_error)
         self._sam2_service.prediction_complete.connect(self._on_prediction_complete)
         self._sam2_service.prediction_failed.connect(self._on_prediction_failed)
+
+        # SR wiring
+        self._sr_service.load_progress.connect(self.sr_loading)
+        self._sr_service.model_loaded.connect(self._on_sr_loaded)
+        self._sr_service.model_load_failed.connect(self._on_sr_error)
+        self._sr_service.upscale_progress.connect(self.status_message)
+        self._sr_service.upscale_complete.connect(self._on_sr_complete)
+        self._sr_service.upscale_failed.connect(self._on_sr_error)
+
         self._selection_model.selection_changed.connect(self.selection_changed)
         self._selection_model.prompts_changed.connect(self.prompts_changed)
 
@@ -57,6 +72,10 @@ class AppController(QObject):
     @property
     def selection_model(self) -> SelectionModel:
         return self._selection_model
+
+    @property
+    def sr_service(self) -> SRService:
+        return self._sr_service
 
     @property
     def multimask(self) -> bool:
@@ -104,6 +123,16 @@ class AppController(QObject):
     def _on_sam2_loaded(self):
         self.sam2_loaded.emit()
         self.status_message.emit("SAM2 model ready")
+
+    def load_sr_model(self):
+        self._sr_service.load_model()
+
+    def _on_sr_loaded(self):
+        self.sr_loaded.emit()
+        self.status_message.emit("SR model ready")
+
+    def _on_sr_error(self, error: str):
+        self.sr_error.emit(error)
 
     # -- Prompt accumulation (no auto-predict) --
 
@@ -185,6 +214,32 @@ class AppController(QObject):
     def clear_all(self):
         self._selection_model.clear_selection()
         self.status_message.emit("Cleared all prompts and selection")
+
+    # -- Super Resolution --
+
+    def apply_super_resolution(self, params: dict):
+        if not self._image_model.is_loaded:
+            self.status_message.emit("No image loaded")
+            return
+        if self._sr_service.is_upscaling:
+            self.status_message.emit("SR already running")
+            return
+        if not self._sr_service.is_loaded:
+            self.status_message.emit("SR model not loaded yet")
+            return
+
+        self.status_message.emit("SR: Starting super resolution...")
+        self._sr_service.upscale(self._image_model.current_image_rgb, params)
+
+    def _on_sr_complete(self, result: np.ndarray):
+        if result.dtype != np.uint8:
+            result = np.clip(result, 0, 255).astype(np.uint8)
+        if result.ndim == 3 and result.shape[2] == 4:
+            result = result[:, :, :3]
+        self._image_model.set_image(result)
+        self.image_changed.emit()
+        h, w = result.shape[:2]
+        self.status_message.emit(f"SR: Complete {w}x{h}")
 
     # -- Image operations --
 

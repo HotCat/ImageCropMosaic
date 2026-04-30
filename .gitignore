@@ -44,3 +44,9 @@ build/
 
 # Temp files
 myplans.txt~
+
+# Error/debug screenshots
+error/
+
+# Diffusers source repo (pipeline copied to sr_pipeline.py)
+diffusers/
