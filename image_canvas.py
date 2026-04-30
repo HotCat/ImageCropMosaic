@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Signal, QPointF, QRectF
 from PySide6.QtGui import (
     QPixmap, QImage, QPen, QBrush, QColor, QPainter,
-    QPainterPath
+    QPainterPath, QTransform
 )
 
 from selection_model import SelectionModel, SelectionType
@@ -266,16 +266,22 @@ class ImageCanvas(QGraphicsView):
         return x, y
 
     def mousePressEvent(self, event):
-        if event.button() != Qt.LeftButton:
-            super().mousePressEvent(event)
-            return
-
-        # Ctrl/Cmd+LeftClick = pan view (works even when image fits viewport)
-        if event.modifiers() & (Qt.ControlModifier | Qt.MetaModifier):
+        # Pan: right-click drag, or Cmd+left-click drag, or Ctrl+left-click drag
+        # Note: on macOS, Ctrl+click generates RightButton (system right-click)
+        is_pan = (
+            event.button() == Qt.RightButton or
+            (event.button() == Qt.LeftButton and
+             event.modifiers() & (Qt.ControlModifier | Qt.MetaModifier))
+        )
+        if is_pan:
             self._is_panning = True
             self._pan_last = event.pos()
             self.setCursor(Qt.ClosedHandCursor)
             event.accept()
+            return
+
+        if event.button() != Qt.LeftButton:
+            super().mousePressEvent(event)
             return
 
         scene_pos = self.mapToScene(event.pos())
@@ -294,13 +300,13 @@ class ImageCanvas(QGraphicsView):
 
     def mouseMoveEvent(self, event):
         if self._is_panning and self._pan_last is not None:
-            last = self._pan_last
             current = event.pos()
-            dx = current.x() - last.x()
-            dy = current.y() - last.y()
+            dx = current.x() - self._pan_last.x()
+            dy = current.y() - self._pan_last.y()
             self._pan_last = current
-            # Translate in viewport coordinates for free panning
-            self.translate(dx, dy)
+            # Account for zoom: translate in scene coordinates
+            t = self.transform()
+            self.translate(dx / t.m11(), dy / t.m22())
             return
 
         if self._is_dragging and self._drag_start is not None:
@@ -314,20 +320,19 @@ class ImageCanvas(QGraphicsView):
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        if event.button() != Qt.LeftButton:
-            super().mouseReleaseEvent(event)
-            return
-
         if self._is_panning:
             self._is_panning = False
             self._pan_last = None
-            # Restore cursor for current mode
             if self._current_mode in (self.MODE_SAM2_POS, self.MODE_SAM2_NEG,
                                        self.MODE_SAM2_BBOX, self.MODE_CROP_BBOX):
                 self.setCursor(Qt.CrossCursor)
             else:
                 self.setCursor(Qt.ArrowCursor)
             event.accept()
+            return
+
+        if event.button() != Qt.LeftButton:
+            super().mouseReleaseEvent(event)
             return
 
         if self._is_dragging and self._drag_start is not None:
