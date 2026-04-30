@@ -270,8 +270,8 @@ class ImageCanvas(QGraphicsView):
             super().mousePressEvent(event)
             return
 
-        # Ctrl+LeftClick = pan view
-        if event.modifiers() & Qt.ControlModifier:
+        # Ctrl/Cmd+LeftClick = pan view
+        if event.modifiers() & (Qt.ControlModifier | Qt.MetaModifier):
             self._is_panning = True
             self._pan_start = (event.pos().x(), event.pos().y())
             self.setCursor(Qt.ClosedHandCursor)
