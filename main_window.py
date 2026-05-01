@@ -26,6 +26,9 @@ class MainWindow(QMainWindow):
         self.resize(1200, 900)
 
         self._controller = AppController(self)
+        self._last_save_dir = str(SAVE_DIR)
+        self._last_save_name = "selection.png"
+        self._last_save_filter = "PNG (*.png)"
 
         self._setup_ui()
         self._setup_toolbar()
@@ -244,14 +247,19 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "No Selection", "Please make a selection first.")
             return
 
-        SAVE_DIR.mkdir(parents=True, exist_ok=True)
+        Path(self._last_save_dir).mkdir(parents=True, exist_ok=True)
 
-        path, _ = QFileDialog.getSaveFileName(
+        path, selected_filter = QFileDialog.getSaveFileName(
             self, "Save Selection",
-            str(SAVE_DIR / "selection.png"),
-            "PNG (*.png);;JPEG (*.jpg);;All Files (*)"
+            str(Path(self._last_save_dir) / self._last_save_name),
+            "PNG (*.png);;JPEG (*.jpg);;All Files (*)",
+            self._last_save_filter,
         )
         if path:
+            self._last_save_dir = str(Path(path).parent)
+            self._last_save_name = Path(path).name
+            if selected_filter:
+                self._last_save_filter = selected_filter
             self._controller.save_selection(path)
 
     @Slot(bool)
