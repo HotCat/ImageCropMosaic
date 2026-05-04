@@ -156,6 +156,14 @@ class MainWindow(QMainWindow):
 
         toolbar.addSeparator()
 
+        # -- Decompose --
+        self._decompose_action = QAction("Decompose", self)
+        self._decompose_action.setShortcut("D")
+        self._decompose_action.setToolTip("Decompose grid image into sub-images (D)")
+        toolbar.addAction(self._decompose_action)
+
+        toolbar.addSeparator()
+
         # -- Save --
         self._save_action = QAction("Save", self)
         self._save_action.setShortcut(QKeySequence.Save)
@@ -201,6 +209,7 @@ class MainWindow(QMainWindow):
         self._multimask_action.toggled.connect(self._on_multimask_toggled)
         self._mosaic_action.triggered.connect(self._on_mosaic)
         self._sr_action.triggered.connect(self._on_sr)
+        self._decompose_action.triggered.connect(self._on_decompose)
         self._save_action.triggered.connect(self._on_save)
 
     def _load_sam2_model(self):
@@ -240,6 +249,13 @@ class MainWindow(QMainWindow):
             "tile_size": 512,
         }
         self._controller.apply_super_resolution(params)
+
+    @Slot()
+    def _on_decompose(self):
+        if not self._controller.image_model.is_loaded:
+            self._statusbar.showMessage("No image loaded")
+            return
+        self._controller.decompose_image()
 
     @Slot()
     def _on_save(self):

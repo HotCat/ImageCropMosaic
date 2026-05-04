@@ -241,6 +241,32 @@ class AppController(QObject):
         h, w = result.shape[:2]
         self.status_message.emit(f"SR: Complete {w}x{h}")
 
+    # -- Decompose --
+
+    def decompose_image(self):
+        if not self._image_model.is_loaded:
+            self.status_message.emit("No image loaded")
+            return
+
+        from image_decomposer import decompose_image
+        from config import SAVE_DIR
+
+        image_path = self._image_model.image_path
+        stem = Path(image_path).stem if image_path else "image"
+        output_dir = str(SAVE_DIR / stem)
+
+        self.status_message.emit("Decomposing image...")
+        try:
+            count, paths = decompose_image(self._image_model.current_image_rgb, output_dir)
+            if count > 0:
+                self.status_message.emit(
+                    f"Decomposed: {count} images saved to {output_dir}"
+                )
+            else:
+                self.status_message.emit("No sub-images detected in this image")
+        except Exception as e:
+            self.status_message.emit(f"Decompose failed: {str(e)}")
+
     # -- Image operations --
 
     def apply_operation(self, operation_id: str, **kwargs):
