@@ -156,6 +156,20 @@ class MainWindow(QMainWindow):
 
         toolbar.addSeparator()
 
+        # -- Scale Down --
+        self._scale_action = QAction("Scale%", self)
+        self._scale_action.setToolTip("Scale down image by percentage")
+        toolbar.addAction(self._scale_action)
+
+        self._scale_spin = QSpinBox()
+        self._scale_spin.setRange(1, 99)
+        self._scale_spin.setValue(50)
+        self._scale_spin.setSuffix("%")
+        self._scale_spin.setToolTip("Scale percentage (1-99%)")
+        toolbar.addWidget(self._scale_spin)
+
+        toolbar.addSeparator()
+
         # -- Decompose --
         self._decompose_action = QAction("Decompose", self)
         self._decompose_action.setShortcut("D")
@@ -210,6 +224,7 @@ class MainWindow(QMainWindow):
         self._mosaic_action.triggered.connect(self._on_mosaic)
         self._sr_action.triggered.connect(self._on_sr)
         self._decompose_action.triggered.connect(self._on_decompose)
+        self._scale_action.triggered.connect(self._on_scale)
         self._save_action.triggered.connect(self._on_save)
 
     def _load_sam2_model(self):
@@ -256,6 +271,14 @@ class MainWindow(QMainWindow):
             self._statusbar.showMessage("No image loaded")
             return
         self._controller.decompose_image()
+
+    @Slot()
+    def _on_scale(self):
+        if not self._controller.image_model.is_loaded:
+            self._statusbar.showMessage("No image loaded")
+            return
+        pct = self._scale_spin.value()
+        self._controller.scale_down_image(pct)
 
     @Slot()
     def _on_save(self):

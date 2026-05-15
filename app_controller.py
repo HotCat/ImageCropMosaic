@@ -267,6 +267,28 @@ class AppController(QObject):
         except Exception as e:
             self.status_message.emit(f"Decompose failed: {str(e)}")
 
+    # -- Scale Down --
+
+    def scale_down_image(self, percentage: int):
+        if not self._image_model.is_loaded:
+            self.status_message.emit("No image loaded")
+            return
+
+        from PIL import Image as PILImage
+
+        img = self._image_model.current_image_rgb
+        h, w = img.shape[:2]
+        new_w = max(1, int(w * percentage / 100))
+        new_h = max(1, int(h * percentage / 100))
+
+        pil_img = PILImage.fromarray(img).resize((new_w, new_h), PILImage.LANCZOS)
+        result = np.array(pil_img)
+        if result.ndim == 2:
+            result = np.stack([result] * 3, axis=-1)
+        self._image_model.set_image(result)
+        self.image_changed.emit()
+        self.status_message.emit(f"Scaled to {percentage}%: {w}x{h} -> {new_w}x{new_h}")
+
     # -- Image operations --
 
     def apply_operation(self, operation_id: str, **kwargs):
